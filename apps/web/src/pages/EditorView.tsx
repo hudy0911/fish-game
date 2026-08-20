@@ -49,6 +49,7 @@ import {
   templatesInCategory,
   type TemplateCategoryId,
 } from '@/lib/templateCategories';
+import { parseMarketShareRoute } from '@/lib/market';
 
 const AiResultImportDialog = lazy(() =>
   import('@/components/editor/AiResultImportDialog').then((module) => ({ default: module.AiResultImportDialog })),
@@ -72,6 +73,7 @@ export function EditorView() {
   const intl = useIntl();
   const { locale } = useLocale();
   const blankTemplate = getBlankTemplate(locale);
+  const marketShareRoute = parseMarketShareRoute(window.location.hash);
 
   const [manifestText, setManifestText] = useState(() => blankManifest(locale));
   const [htmlText, setHtmlText] = useState(() => getDefaultHtml(locale));
@@ -79,7 +81,7 @@ export function EditorView() {
   const [extraFiles, setExtraFiles] = useState<Record<string, Uint8Array>>({});
   const [activeFile, setActiveFile] = useState<EditorFile>('manifest');
   const [templates, setTemplates] = useState<TemplateListEntry[]>([]);
-  const [activeCategory, setActiveCategory] = useState<TemplateCategoryId>('all');
+  const [activeCategory, setActiveCategory] = useState<TemplateCategoryId>(marketShareRoute ? 'market' : 'all');
   const [marketCount, setMarketCount] = useState(0);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('blank');
   const [loadedTemplateId, setLoadedTemplateId] = useState<string>('blank');
@@ -106,6 +108,10 @@ export function EditorView() {
   useEffect(() => {
     selectedTemplateIdRef.current = selectedTemplateId;
   }, [selectedTemplateId]);
+
+  useEffect(() => {
+    if (marketShareRoute) setActiveCategory('market');
+  }, [marketShareRoute?.issueNumber, Boolean(marketShareRoute)]);
 
   useEffect(() => {
     void (async () => {
@@ -448,6 +454,7 @@ export function EditorView() {
           {/* 市场面板始终挂载：进入页面即开始加载，切到市场 tab 时无需等待。 */}
           <div className={cn(normalizedCategory !== 'market' && 'hidden')}>
             <MarketSection
+              featuredIssueNumber={marketShareRoute === null ? undefined : marketShareRoute.issueNumber}
               onInstalled={(templateId) => void onMarketInstalled(templateId)}
               onEntriesChange={setMarketCount}
             />

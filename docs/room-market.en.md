@@ -30,7 +30,11 @@ public GitHub facilities and the jsdelivr CDN — no extra server-side service:
   `parti-room` label — the room is listed.
 - **Listing data = the issues API response** (the manifest rides along in `body` for
   free — one request, and no dependence on GitHub release downloads, which lack CORS
-  headers).
+  headers). Listings are sorted by comment count in descending order by default.
+- **Card ID = the registry issue number.** Share links use
+  `#/editor/market/<issueNumber>`. The web app fetches that card through GitHub's
+  single-issue API, pins it, then loads and deduplicates the normal paginated list.
+  Closed, unlabelled, or missing issues are reported as unavailable shared rooms.
 - **Install = reading the author's repository files via jsdelivr**:
   `data.jsdelivr.com` lists the file tree, `cdn.jsdelivr.net` serves each file — CORS
   enabled and no GitHub API quota consumed.
@@ -47,6 +51,8 @@ description, beta/recommended badges) → click "Install" → the package is fet
 jsdelivr, validated, and stored locally → create a room exactly like any imported
 template. Players joining the room still receive the room code from the host over P2P
 and never touch the market.
+Users can also select a market card and use its top-right share button to copy a link
+and invoke the browser Web Share dialog.
 
 ## 2. Publishing guide (authors / AI agents)
 
@@ -131,6 +137,9 @@ the **"Publish a room / 发布房间到市场"** template:
 | `parti-room` | Listing gate. Only open issues with this label appear in the market |
 | `beta` | Shows a "Beta" badge — the room may be incomplete or unstable |
 | `recommend` | Shows a "Recommended" badge — quality acknowledged by maintainers |
+
+If an issue has both `beta` and `recommend`, its card only shows the higher-priority
+"Recommended" badge.
 
 ### 2.6 Updates and delisting
 

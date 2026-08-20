@@ -90,16 +90,17 @@ export interface MarketListResult {
   error?: MarketError;
 }
 
-interface GitHubIssueItem {
+export interface GitHubIssueItem {
   number: number;
   title: string;
   html_url: string;
   body?: string | null;
   pull_request?: unknown;
+  state?: string;
   labels: Array<string | { name?: string }>;
 }
 
-const CACHE_KEY = 'parti-market-cache-v1';
+const CACHE_KEY = 'parti-market-cache-v2';
 const CACHE_TTL = 10 * 60 * 1000;
 /** 注册表每页拉取的 issue 数。 */
 export const MARKET_PAGE_SIZE = 30;
@@ -142,9 +143,13 @@ function isRateLimited(res: Response): boolean {
   return res.status === 403 || res.status === 429;
 }
 
-async function fetchMarketIssues(page: number): Promise<GitHubIssueItem[]> {
+export function marketIssuesUrl(page: number): string {
   const { owner, repo } = MARKET_REGISTRY;
-  const url = `https://api.github.com/repos/${owner}/${repo}/issues?state=open&labels=${MARKET_GATE_LABEL}&per_page=${MARKET_PAGE_SIZE}&page=${page}`;
+  return `https://api.github.com/repos/${owner}/${repo}/issues?state=open&labels=${MARKET_GATE_LABEL}&sort=comments&direction=desc&per_page=${MARKET_PAGE_SIZE}&page=${page}`;
+}
+
+async function fetchMarketIssues(page: number): Promise<GitHubIssueItem[]> {
+  const url = marketIssuesUrl(page);
   const res = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } });
   if (isRateLimited(res)) {
     throw new MarketError('REGISTRY_RATE_LIMITED', { status: res.status });
@@ -155,46 +160,69 @@ async function fetchMarketIssues(page: number): Promise<GitHubIssueItem[]> {
   return (await res.json()) as GitHubIssueItem[];
 }
 
+function issueLabels(issue: GitHubIssueItem): string[] {
+  return issue.labels.map((label) => (typeof label === 'string' ? label : label.name ?? ''));
+}
+
+/** 把一个仍在上架的注册表 issue 解析为市场卡片；不符合上架条件时返回 null。 */
+export function marketEntryFromIssue(issue: GitHubIssueItem): MarketTemplateEntry | null {
+  if (issue.pull_request || (issue.state !== undefined && issue.state !== 'open')) return null;
+  const labels = issueLabels(issue);
+  if (!labels.includes(MARKET_GATE_LABEL)) return null;
+  const ref = parseMarketIssueTitle(issue.title);
+  if (!ref) return null;
+  const key = marketRefString(ref);
+  const parsed = parseManifestFromIssueBody(issue.body);
+  const packageDir = parsePackageDirFromIssueBody(issue.body);
+  const source = parseMarketSourceFromIssueBody(issue.body);
+  const manifest = 'manifest' in parsed ? parsed.manifest : undefined;
+  const gitPrimary = source?.primary.kind === 'git-folder' ? source.primary : undefined;
+  return {
+    ...ref,
+    ref: key,
+    issueNumber: issue.number,
+    issueUrl: issue.html_url,
+    badges: marketBadgesFromLabels(labels),
+    packageDir: gitPrimary?.packageDir ?? packageDir,
+    ...(source ? { source } : {}),
+    ...(manifest ? {
+      manifest,
+      cover: source?.primary.kind === 'release-zip' && manifest.cover && !/^(https?:)?\/\//.test(manifest.cover)
+        ? undefined
+        : resolveMarketCover(
+            gitPrimary ? { ...ref, tag: gitPrimary.ref } : ref,
+            gitPrimary?.packageDir ?? packageDir,
+            manifest.cover,
+          ),
+    } : {}),
+    ...('manifestError' in parsed ? { manifestError: parsed.manifestError } : {}),
+  };
+}
+
+/** 单卡详情只返回具备有效 manifest、可以完整展示的上架条目。 */
+export function marketDetailEntryFromIssue(issue: GitHubIssueItem): MarketTemplateEntry | null {
+  const entry = marketEntryFromIssue(issue);
+  return entry?.manifest ? entry : null;
+}
+
 function buildMarketEntries(
   issues: GitHubIssueItem[],
   excludeRefs: ReadonlySet<string> = new Set(),
+  excludeIssueNumbers: ReadonlySet<number> = new Set(),
 ): MarketTemplateEntry[] {
+  const seenIssueNumbers = new Set<number>();
   const seen = new Set<string>();
   const entries: MarketTemplateEntry[] = [];
   for (const issue of issues) {
-    if (issue.pull_request) continue;
-    const ref = parseMarketIssueTitle(issue.title);
-    if (!ref) continue;
-    const key = marketRefString(ref);
-    if (seen.has(key) || excludeRefs.has(key)) continue;
-    seen.add(key);
-
-    const labels = issue.labels.map((label) => (typeof label === 'string' ? label : label.name ?? ''));
-    const parsed = parseManifestFromIssueBody(issue.body);
-    const packageDir = parsePackageDirFromIssueBody(issue.body);
-    const source = parseMarketSourceFromIssueBody(issue.body);
-    const manifest = 'manifest' in parsed ? parsed.manifest : undefined;
-    const gitPrimary = source?.primary.kind === 'git-folder' ? source.primary : undefined;
-    entries.push({
-      ...ref,
-      ref: key,
-      issueNumber: issue.number,
-      issueUrl: issue.html_url,
-      badges: marketBadgesFromLabels(labels),
-      packageDir: gitPrimary?.packageDir ?? packageDir,
-      ...(source ? { source } : {}),
-      ...(manifest ? {
-        manifest,
-        cover: source?.primary.kind === 'release-zip' && manifest.cover && !/^(https?:)?\/\//.test(manifest.cover)
-          ? undefined
-          : resolveMarketCover(
-              gitPrimary ? { ...ref, tag: gitPrimary.ref } : ref,
-              gitPrimary?.packageDir ?? packageDir,
-              manifest.cover,
-            ),
-      } : {}),
-      ...('manifestError' in parsed ? { manifestError: parsed.manifestError } : {}),
-    });
+    const entry = marketEntryFromIssue(issue);
+    if (!entry) continue;
+    if (
+      seenIssueNumbers.has(entry.issueNumber) || excludeIssueNumbers.has(entry.issueNumber)
+      || seen.has(entry.ref) || excludeRefs.has(entry.ref)
+    ) continue;
+    seenIssueNumbers.add(entry.issueNumber);
+    seen.add(entry.ref);
+    entries.push(entry);
   }
   return entries;
 }
@@ -234,6 +262,18 @@ export async function listMarketTemplates(options: { forceRefresh?: boolean } = 
   }
 }
 
+/** 按注册表 issue 编号获取单张上架卡片；不存在、已关闭或已下架时返回 null。 */
+export async function getMarketTemplate(issueNumber: number): Promise<MarketTemplateEntry | null> {
+  if (!Number.isSafeInteger(issueNumber) || issueNumber <= 0) return null;
+  const { owner, repo } = MARKET_REGISTRY;
+  const url = `https://api.github.com/repos/${owner}/${repo}/issues/${issueNumber}`;
+  const res = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } });
+  if (res.status === 404) return null;
+  if (isRateLimited(res)) throw new MarketError('REGISTRY_RATE_LIMITED', { status: res.status });
+  if (!res.ok) throw new MarketError('REGISTRY_FETCH_FAILED', { status: res.status });
+  return marketDetailEntryFromIssue((await res.json()) as GitHubIssueItem);
+}
+
 /**
  * 加载市场的下一页。`excludeRefs` 传入已展示的 ref，跨页去重。
  * 与首页不同，失败时直接抛出 MarketError，由调用方展示重试入口。
@@ -241,9 +281,10 @@ export async function listMarketTemplates(options: { forceRefresh?: boolean } = 
 export async function loadMarketPage(
   page: number,
   excludeRefs: ReadonlySet<string>,
+  excludeIssueNumbers: ReadonlySet<number> = new Set(),
 ): Promise<{ entries: MarketTemplateEntry[]; hasMore: boolean; nextPage: number }> {
   const issues = await fetchMarketIssues(page);
-  return toPageResult(buildMarketEntries(issues, excludeRefs), issues.length, page);
+  return toPageResult(buildMarketEntries(issues, excludeRefs, excludeIssueNumbers), issues.length, page);
 }
 
 /** 已安装到本地（IndexedDB）的市场模版 ref 集合。 */

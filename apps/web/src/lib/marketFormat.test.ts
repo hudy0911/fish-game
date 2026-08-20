@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildMarketShareUrl,
   joinPackagePath,
   marketBadgesFromLabels,
   marketRefString,
   marketReleaseUrl,
+  mergeMarketEntries,
   parseManifestFromIssueBody,
   parseMarketSourceFromIssueBody,
   parseMarketIssueTitle,
+  parseMarketShareRoute,
   parsePackageDirFromIssueBody,
   resolveMarketCover,
   releaseAssetUrl,
@@ -49,8 +52,9 @@ describe('parseMarketIssueTitle', () => {
 });
 
 describe('marketBadgesFromLabels', () => {
-  it('keeps known badges in canonical order', () => {
-    expect(marketBadgesFromLabels(['recommend', 'parti-room', 'beta'])).toEqual(['beta', 'recommend']);
+  it('shows recommend instead of beta when both labels are present', () => {
+    expect(marketBadgesFromLabels(['recommend', 'parti-room', 'beta'])).toEqual(['recommend']);
+    expect(marketBadgesFromLabels(['parti-room', 'beta'])).toEqual(['beta']);
   });
 
   it('ignores unknown labels', () => {
@@ -110,6 +114,35 @@ describe('marketRefString', () => {
   it('renders owner/repo with optional tag', () => {
     expect(marketRefString({ owner: 'alice', repo: 'game-a' })).toBe('alice/game-a');
     expect(marketRefString({ owner: 'alice', repo: 'game-a', tag: 'v2' })).toBe('alice/game-a@v2');
+  });
+});
+
+describe('market share routes', () => {
+  it('parses positive issue numbers and identifies invalid market links', () => {
+    expect(parseMarketShareRoute('#/editor/market/42')).toEqual({ issueNumber: 42 });
+    expect(parseMarketShareRoute('#/editor/market/42?from=test')).toEqual({ issueNumber: 42 });
+    expect(parseMarketShareRoute('#/editor/market')).toEqual({ issueNumber: null });
+    expect(parseMarketShareRoute('#/editor/market/0')).toEqual({ issueNumber: null });
+    expect(parseMarketShareRoute('#/editor/market/nope')).toEqual({ issueNumber: null });
+    expect(parseMarketShareRoute('#/editor')).toBeNull();
+  });
+
+  it('builds an absolute link without losing the deployment path', () => {
+    expect(buildMarketShareUrl('https://parti.example/app/?lang=zh#/editor', 42)).toBe(
+      'https://parti.example/app/?lang=zh#/editor/market/42',
+    );
+  });
+});
+
+describe('mergeMarketEntries', () => {
+  it('keeps the featured card first and deduplicates by issue number and ref', () => {
+    const featured = { issueNumber: 9, ref: 'alice/game-a', marker: 'featured' };
+    expect(mergeMarketEntries([
+      featured,
+      { issueNumber: 9, ref: 'alice/game-a', marker: 'page duplicate' },
+      { issueNumber: 10, ref: 'alice/game-a', marker: 'ref duplicate' },
+      { issueNumber: 11, ref: 'bob/game-b', marker: 'other' },
+    ])).toEqual([featured, { issueNumber: 11, ref: 'bob/game-b', marker: 'other' }]);
   });
 });
 

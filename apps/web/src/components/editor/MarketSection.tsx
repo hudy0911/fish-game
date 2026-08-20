@@ -1,23 +1,30 @@
 /** 房间市场面板：展示 GitHub issue 注册表中上架的在线房间模版，支持一键安装与滚动分页加载。 */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { DownloadIcon, Loader2Icon, RefreshCwIcon, StoreIcon } from 'lucide-react';
+import { DownloadIcon, Loader2Icon, RefreshCwIcon, Share2Icon, StoreIcon } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatResolveError } from '@/i18n/formatErrors';
+import { copyTextToClipboard } from '@/lib/clipboard';
 import {
+  buildMarketShareUrl,
   cacheMarketState,
+  getMarketTemplate,
   installMarketTemplate,
   listInstalledMarketRefs,
   listMarketTemplates,
   loadMarketPage,
   MARKET_DOCS_URL,
+  mergeMarketEntries,
   marketReleaseUrl,
   type MarketError,
   type MarketTemplateEntry,
 } from '@/lib/market';
 
 interface MarketSectionProps {
+  /** 分享路由携带的卡片 id；null 表示路由存在但 id 无效，undefined 表示普通访问。 */
+  featuredIssueNumber?: number | null;
   onInstalled: (templateId: string) => void;
   /** 已加载的市场条目数变化时上报（用于分类 tab 计数）。 */
   onEntriesChange?: (count: number) => void;
@@ -37,7 +44,9 @@ function badgeClass(badge: string): string {
     : 'bg-primary-bright/15 text-primary-bright';
 }
 
-export function MarketSection({ onInstalled, onEntriesChange }: MarketSectionProps) {
+type FeaturedStatus = 'idle' | 'loading' | 'ready' | 'not-found' | 'error';
+
+export function MarketSection({ featuredIssueNumber, onInstalled, onEntriesChange }: MarketSectionProps) {
   const intl = useIntl();
   const [state, setState] = useState<MarketViewState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,11 +55,43 @@ export function MarketSection({ onInstalled, onEntriesChange }: MarketSectionPro
   const [installedRefs, setInstalledRefs] = useState<Set<string>>(new Set());
   const [installingRef, setInstallingRef] = useState<string | null>(null);
   const [installErrors, setInstallErrors] = useState<Record<string, string>>({});
+  const [featuredEntry, setFeaturedEntry] = useState<MarketTemplateEntry | null>(null);
+  const [featuredStatus, setFeaturedStatus] = useState<FeaturedStatus>('idle');
+  const [selectedIssueNumber, setSelectedIssueNumber] = useState<number | null>(null);
 
   const stateRef = useRef(state);
   stateRef.current = state;
   const loadingMoreRef = useRef(loadingMore);
   loadingMoreRef.current = loadingMore;
+  const featuredEntryRef = useRef(featuredEntry);
+  featuredEntryRef.current = featuredEntry;
+
+  useEffect(() => {
+    let active = true;
+    setFeaturedEntry(null);
+    if (featuredIssueNumber === undefined) {
+      setFeaturedStatus('idle');
+      return () => { active = false; };
+    }
+    if (featuredIssueNumber === null) {
+      setFeaturedStatus('not-found');
+      return () => { active = false; };
+    }
+    setFeaturedStatus('loading');
+    void getMarketTemplate(featuredIssueNumber).then((entry) => {
+      if (!active) return;
+      if (!entry) {
+        setFeaturedStatus('not-found');
+        return;
+      }
+      setFeaturedEntry(entry);
+      setSelectedIssueNumber(entry.issueNumber);
+      setFeaturedStatus('ready');
+    }).catch(() => {
+      if (active) setFeaturedStatus('error');
+    });
+    return () => { active = false; };
+  }, [featuredIssueNumber]);
 
   const load = useCallback(async (forceRefresh = false) => {
     setLoading(true);
@@ -80,9 +121,14 @@ export function MarketSection({ onInstalled, onEntriesChange }: MarketSectionPro
     setLoadingMore(true);
     setLoadMoreError(null);
     try {
-      const excludeRefs = new Set(current.entries.map((entry) => entry.ref));
-      const page = await loadMarketPage(current.nextPage, excludeRefs);
-      const merged = [...current.entries, ...page.entries];
+      const displayed = mergeMarketEntries([
+        ...(featuredEntryRef.current ? [featuredEntryRef.current] : []),
+        ...current.entries,
+      ]);
+      const excludeRefs = new Set(displayed.map((entry) => entry.ref));
+      const excludeIssueNumbers = new Set(displayed.map((entry) => entry.issueNumber));
+      const page = await loadMarketPage(current.nextPage, excludeRefs, excludeIssueNumbers);
+      const merged = mergeMarketEntries([...current.entries, ...page.entries]);
       setState({ ...current, entries: merged, nextPage: page.nextPage, hasMore: page.hasMore, stale: false });
       cacheMarketState(merged, page.nextPage, page.hasMore);
     } catch (reason) {
@@ -127,7 +173,26 @@ export function MarketSection({ onInstalled, onEntriesChange }: MarketSectionPro
     }
   }
 
-  const entries = state?.entries ?? [];
+  async function share(entry: MarketTemplateEntry): Promise<void> {
+    const url = buildMarketShareUrl(window.location.href, entry.issueNumber);
+    const copyPromise = copyTextToClipboard(url);
+    const sharePromise = typeof navigator.share === 'function'
+      ? navigator.share({
+          title: entry.manifest?.name ?? entry.ref,
+          text: entry.manifest?.description,
+          url,
+        }).catch(() => undefined)
+      : Promise.resolve();
+    const copied = await copyPromise;
+    await sharePromise;
+    if (copied) toast.success(intl.formatMessage({ id: 'editor.market.shareCopied' }));
+    else toast.error(intl.formatMessage({ id: 'editor.market.shareCopyFailed' }));
+  }
+
+  const entries = mergeMarketEntries([
+    ...(featuredEntry ? [featuredEntry] : []),
+    ...(state?.entries ?? []),
+  ]);
   const registryFailed = Boolean(state?.error) && !state?.stale;
 
   const entryCount = entries.length;
@@ -176,6 +241,16 @@ export function MarketSection({ onInstalled, onEntriesChange }: MarketSectionPro
           {formatResolveError(intl, state?.error)}
         </div>
       )}
+      {featuredStatus === 'not-found' && (
+        <div className="mb-3 rounded-[11px] border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-xs text-destructive">
+          <FormattedMessage id="editor.market.sharedNotFound" />
+        </div>
+      )}
+      {featuredStatus === 'error' && (
+        <div className="mb-3 rounded-[11px] border border-primary-bright/30 bg-primary-bright/10 px-3.5 py-3 text-xs text-foreground">
+          <FormattedMessage id="editor.market.sharedLoadFailed" />
+        </div>
+      )}
 
       {!loading && entries.length === 0 && !registryFailed ? (
         <div className="flex min-h-32 flex-col items-center justify-center rounded-[20px] border border-dashed border-border-strong bg-card/55 p-8 text-center">
@@ -187,6 +262,7 @@ export function MarketSection({ onInstalled, onEntriesChange }: MarketSectionPro
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] md:gap-[18px]">
             {entries.map((entry) => {
+              const selected = selectedIssueNumber === entry.issueNumber;
               const installed = installedRefs.has(entry.ref);
               const installing = installingRef === entry.ref;
               const unavailable = Boolean(entry.manifestError);
@@ -196,8 +272,43 @@ export function MarketSection({ onInstalled, onEntriesChange }: MarketSectionPro
               return (
                 <div
                   key={entry.ref}
-                  className="relative flex flex-col items-stretch overflow-hidden rounded-[18px] border border-border bg-surface shadow-[0_10px_28px_rgba(91,72,15,0.07)] transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-[3px] hover:border-border-strong hover:shadow-[0_20px_46px_rgba(91,72,15,0.16)]"
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={selected}
+                  aria-label={intl.formatMessage(
+                    { id: 'editor.market.selectCard' },
+                    { name: entry.manifest?.name ?? entry.ref },
+                  )}
+                  className={cn(
+                    'relative flex cursor-pointer flex-col items-stretch overflow-hidden rounded-[18px] border border-border bg-surface shadow-[0_10px_28px_rgba(91,72,15,0.07)] outline-none transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-[3px] hover:border-border-strong hover:shadow-[0_20px_46px_rgba(91,72,15,0.16)] focus-visible:ring-3 focus-visible:ring-ring/50',
+                    selected && 'border-[#d6a900] shadow-[0_0_0_2px_rgba(214,169,0,0.32),0_18px_44px_rgba(214,169,0,0.18)]',
+                  )}
+                  onClick={(event) => {
+                    if ((event.target as HTMLElement).closest('a,button')) return;
+                    setSelectedIssueNumber(entry.issueNumber);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
+                    event.preventDefault();
+                    setSelectedIssueNumber(entry.issueNumber);
+                  }}
                 >
+                  {selected && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon-sm"
+                      className="absolute top-3 right-3 z-[3] rounded-full bg-surface/90 shadow-sm"
+                      aria-label={intl.formatMessage(
+                        { id: 'editor.market.shareCard' },
+                        { name: entry.manifest?.name ?? entry.ref },
+                      )}
+                      title={intl.formatMessage({ id: 'editor.market.share' })}
+                      onClick={() => void share(entry)}
+                    >
+                      <Share2Icon aria-hidden="true" />
+                    </Button>
+                  )}
                   <span
                     className="relative block aspect-[16/10] w-full bg-[linear-gradient(135deg,rgba(155,113,0,0.22),rgba(139,92,246,0.18)_55%,rgba(81,219,147,0.2))] bg-cover bg-center"
                     aria-hidden="true"

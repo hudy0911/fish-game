@@ -24,8 +24,9 @@ export function parseMarketIssueTitle(title: string): MarketRepoRef | null {
     : { owner: parsed.owner, repo: parsed.repo };
 }
 
-/** 从 issue labels 中提取展示徽章（保持 MARKET_BADGE_LABELS 的顺序）。 */
+/** 从 issue labels 中提取展示徽章；recommend 优先级高于 beta。 */
 export function marketBadgesFromLabels(labels: string[]): MarketBadge[] {
+  if (labels.includes('recommend')) return ['recommend'];
   return MARKET_BADGE_LABELS.filter((badge) => labels.includes(badge));
 }
 
@@ -151,4 +152,38 @@ export function marketReleaseUrl(
     source.primary.refKind === 'tag' ? { ...ref, tag: source.primary.ref } : { owner: ref.owner, repo: ref.repo },
     MARKET_PACKAGE_ASSET,
   );
+}
+
+export interface MarketShareRoute {
+  issueNumber: number | null;
+}
+
+/** 解析房间市场分享路由；非市场分享路由返回 null，无效卡片 id 保留为 null。 */
+export function parseMarketShareRoute(hash: string): MarketShareRoute | null {
+  const path = hash.replace(/^#/, '').split('?')[0].replace(/\/+$/, '');
+  const match = path.match(/^\/editor\/market(?:\/([^/]+))?$/);
+  if (!match) return null;
+  const value = match[1];
+  if (!value || !/^[1-9]\d*$/.test(value)) return { issueNumber: null };
+  const issueNumber = Number(value);
+  return Number.isSafeInteger(issueNumber) ? { issueNumber } : { issueNumber: null };
+}
+
+/** 基于当前部署地址生成可跨设备打开的绝对市场分享链接。 */
+export function buildMarketShareUrl(currentUrl: string, issueNumber: number): string {
+  const url = new URL(currentUrl);
+  url.hash = `/editor/market/${issueNumber}`;
+  return url.toString();
+}
+
+/** 按卡片 id 和仓库 ref 去重，保留最先出现的条目（用于置顶分享卡片）。 */
+export function mergeMarketEntries<T extends { issueNumber: number; ref: string }>(entries: readonly T[]): T[] {
+  const issueNumbers = new Set<number>();
+  const refs = new Set<string>();
+  return entries.filter((entry) => {
+    if (issueNumbers.has(entry.issueNumber) || refs.has(entry.ref)) return false;
+    issueNumbers.add(entry.issueNumber);
+    refs.add(entry.ref);
+    return true;
+  });
 }

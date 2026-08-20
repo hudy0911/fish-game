@@ -27,7 +27,10 @@ zip 或粘贴仓库地址。本文档面向**房间作者 / AI agent**，说明�
   作者仓库中的房间包有效后，把 manifest 写入 issue 正文的标记区块并打上
   `parti-room` label，房间即上架。
 - **列表数据 = issue 列表 API 响应**（manifest 随 `body` 免费返回，一次请求搞定，
-  天然避开 GitHub release 下载的 CORS 限制）。
+  天然避开 GitHub release 下载的 CORS 限制）。列表默认按评论数从高到低排序。
+- **卡片 ID = 登记 issue 编号**。分享链接使用 `#/editor/market/<issueNumber>`；打开后 Web
+  会通过 GitHub 单 issue API 获取该卡片并置顶，再照常分页加载市场列表并去重。已关闭、
+  已移除 `parti-room` 标签或不存在的 issue 会显示“分享的房间不存在或已下架”。
 - **安装 = 经 jsdelivr 读取作者仓库文件**：`data.jsdelivr.com` 列文件树，
   `cdn.jsdelivr.net` 逐个拉取，带 CORS 且不消耗 GitHub API 配额。
 - **release 中的 `parti.room.zip` = 人工兜底**。浏览器无法可靠地跨域读取 GitHub
@@ -39,6 +42,7 @@ zip 或粘贴仓库地址。本文档面向**房间作者 / AI agent**，说明�
 用户侧流程：创建房间页 →「房间市场」标签页列出上架房间（封面、名称、描述、
 beta/推荐徽章）→ 点击「安装」→ 经 jsdelivr 拉取房间包、校验、存入本地 → 与普通
 导入模版一样创建房间。加入房间的其他玩家仍通过 P2P 从房主获取房间代码，不接触市场。
+市场卡片也可先点击选中，再使用右上角的分享按钮复制链接并唤起浏览器 Web Share。
 
 ## 2. 发布步骤（作者 / AI agent）
 
@@ -113,6 +117,8 @@ cp dist/parti.room.json ./parti.room.json
 | `parti-room` | 上架门槛。只有带此 label 的 open issue 会出现在市场列表 |
 | `beta` | 卡片显示「测试版」徽章，提示房间可能不完善 |
 | `recommend` | 卡片显示「推荐」徽章，表示维护者认可的质量 |
+
+如果同一 issue 同时带有 `beta` 和 `recommend`，卡片只显示优先级更高的「推荐」徽章。
 
 ### 2.6 更新与下架
 
