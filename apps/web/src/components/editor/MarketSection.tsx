@@ -26,6 +26,8 @@ interface MarketSectionProps {
   /** 分享路由携带的卡片 id；null 表示路由存在但 id 无效，undefined 表示普通访问。 */
   featuredIssueNumber?: number | null;
   onInstalled: (templateId: string) => void;
+  /** 市场卡片选择状态变化时上报，用于阻止把未安装卡片当作可创建模板。 */
+  onSelectionChange?: (selected: boolean) => void;
   /** 已加载的市场条目数变化时上报（用于分类 tab 计数）。 */
   onEntriesChange?: (count: number) => void;
 }
@@ -46,7 +48,7 @@ function badgeClass(badge: string): string {
 
 type FeaturedStatus = 'idle' | 'loading' | 'ready' | 'not-found' | 'error';
 
-export function MarketSection({ featuredIssueNumber, onInstalled, onEntriesChange }: MarketSectionProps) {
+export function MarketSection({ featuredIssueNumber, onInstalled, onSelectionChange, onEntriesChange }: MarketSectionProps) {
   const intl = useIntl();
   const [state, setState] = useState<MarketViewState | null>(null);
   const [loading, setLoading] = useState(true);
@@ -201,6 +203,12 @@ export function MarketSection({ featuredIssueNumber, onInstalled, onEntriesChang
   useEffect(() => {
     onEntriesChangeRef.current?.(entryCount);
   }, [entryCount]);
+
+  const onSelectionChangeRef = useRef(onSelectionChange);
+  onSelectionChangeRef.current = onSelectionChange;
+  useEffect(() => {
+    onSelectionChangeRef.current?.(selectedIssueNumber !== null);
+  }, [selectedIssueNumber]);
 
   return (
     <div>

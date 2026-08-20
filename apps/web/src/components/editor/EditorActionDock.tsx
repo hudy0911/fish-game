@@ -24,7 +24,7 @@ export function EditorActionDock({ canCreate, busy, selectionReady, showLocalPre
             </Button>
           </>
         ) : (
-          <Button size="lg" onClick={onEdit}>
+          <Button size="lg" disabled={busy || !selectionReady} onClick={onEdit}>
             <FormattedMessage id="editor.dock.continueCreate" /> <ArrowRightIcon data-icon="inline-end" />
           </Button>
         )}

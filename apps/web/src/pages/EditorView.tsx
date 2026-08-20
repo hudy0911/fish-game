@@ -83,6 +83,7 @@ export function EditorView() {
   const [templates, setTemplates] = useState<TemplateListEntry[]>([]);
   const [activeCategory, setActiveCategory] = useState<TemplateCategoryId>(marketShareRoute ? 'market' : 'all');
   const [marketCount, setMarketCount] = useState(0);
+  const [marketCardSelected, setMarketCardSelected] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('blank');
   const [loadedTemplateId, setLoadedTemplateId] = useState<string>('blank');
   const [templateLoadStates, setTemplateLoadStates] = useState<Record<string, TemplateLoadState>>({});
@@ -372,9 +373,10 @@ export function EditorView() {
   }, []);
 
   const isBlank = selectedTemplateId === 'blank';
-  const selectionReady = isBlank
+  const selectedTemplateReady = isBlank
     ? loadedTemplateId === 'blank'
     : templateLoadStates[selectedTemplateId]?.status === 'ready' && loadedTemplateId === selectedTemplateId;
+  const selectionReady = selectedTemplateReady && !(activeCategory === 'market' && marketCardSelected);
   const goCreate = showEditor || !isBlank;
   const selectedEntry = templates.find((t) => t.id === selectedTemplateId);
   const showLocalPreview =
@@ -456,6 +458,7 @@ export function EditorView() {
             <MarketSection
               featuredIssueNumber={marketShareRoute === null ? undefined : marketShareRoute.issueNumber}
               onInstalled={(templateId) => void onMarketInstalled(templateId)}
+              onSelectionChange={setMarketCardSelected}
               onEntriesChange={setMarketCount}
             />
           </div>
