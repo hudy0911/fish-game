@@ -135,6 +135,10 @@ VITE_MARKET_REGISTRY=<owner>/<repo>
 
 The lobby service is backed by the Supabase Edge Function and migration included in this repository. See the [lobby service documentation](./docs/lobby-service.md) for its API, lease, and CORS contract.
 
+The Supabase Realtime transport is bring-your-own-project only. Users must enter their own Supabase project URL and
+publishable/anon key under Advanced configurations. Parti deployments do not inject or distribute shared Realtime
+credentials; usage and billing belong to the user's project.
+
 ## Repository structure
 
 ```text

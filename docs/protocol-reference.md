@@ -126,5 +126,7 @@ UI 侧可通过保留事件 `parti.onEvent('__error', ({ code, message }) => ...
 - Socket.IO 等尚未提供适配器的 Transport
 
 当前可用：**Local（本地预览）+ PeerJS（全网直连）+ LAN（LocalSend 发现与 WebRTC
-DataChannel 直连）+ Common/Supabase Realtime**。所有实现复用相同 Room 协议、snapshot
-同步、重连与持久化恢复；LAN 的网络边界与信令隐私见[局域网直连](./lan-direct.md)。
+DataChannel 直连）+ Common/Supabase Realtime（仅支持用户自带项目）**。Parti 不提供共享的
+Supabase Realtime 项目、URL 或 publishable key；用户自带项目的用量与费用由该项目承担。
+所有实现复用相同 Room 协议、snapshot 同步、重连与持久化恢复；LAN 的网络边界与信令隐私见
+[局域网直连](./lan-direct.md)。

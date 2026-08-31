@@ -126,6 +126,9 @@ export function TransportProfilesDialog({ open, onOpenChange, onProfilesChange }
                 <div className="grid gap-2">
                   <Label htmlFor="transport-supabase-key">{intl.formatMessage({ id: 'user.settings.profilesSupabaseKey' })}</Label>
                   <Input id="transport-supabase-key" type="password" value={draft.publishableKey} onChange={(event) => setDraft({ ...draft, publishableKey: event.target.value })} />
+                  <p className="text-xs text-muted-foreground">
+                    {intl.formatMessage({ id: 'user.settings.profilesSupabaseByoHint' })}
+                  </p>
                 </div>
               </>
             )}

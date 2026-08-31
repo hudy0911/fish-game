@@ -2,8 +2,6 @@
 
 interface ImportMetaEnv {
   readonly VITE_LOBBY_SERVICE_URL?: string;
-  readonly VITE_COMMON_SUPABASE_URL?: string;
-  readonly VITE_COMMON_SUPABASE_PUBLISHABLE_KEY?: string;
 }
 
 interface ImportMeta {

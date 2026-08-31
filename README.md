@@ -136,6 +136,9 @@ VITE_MARKET_REGISTRY=<owner>/<repo>
 
 大厅服务由仓库中的 Supabase Edge Function 和迁移提供。接口、租约与 CORS 约定见[大厅服务文档](./docs/lobby-service.md)。
 
+Supabase Realtime transport 仅支持用户在“高级配置”中填写自己的 Supabase 项目地址和
+publishable/anon key。Parti 部署不会注入或分发共享的 Realtime 项目凭据；相关用量与费用由用户自己的项目承担。
+
 ## 项目结构
 
 ```text

@@ -16,27 +16,16 @@ export interface TransportProfile {
 export type CustomTransportProfileInput = Pick<TransportProfile, 'name' | 'config'>;
 export const BUILTIN_PEERJS_ID = 'builtin:peerjs';
 export const BUILTIN_LAN_ID = 'builtin:lan';
-export const BUILTIN_SUPABASE_ID = 'builtin:supabase';
 export const MAX_TRANSPORT_PROFILE_NAME_LENGTH = 50;
 const PROFILES_KEY = 'parti:transport-profiles:v1';
 const SELECTED_KEY = 'parti:transport-profile:selected:v1';
 const LAST_LAN_KEY = 'parti:transport-profile:last-lan:v1';
-const LEGACY_PREFERENCE_KEY = 'parti:transport-preference';
 export const TRANSPORT_PROFILES_CHANGED_EVENT = 'parti:transport-profiles-changed';
-
-interface TransportEnvironment { supabaseUrl?: string; supabasePublishableKey?: string }
 
 function notifyProfilesChanged(storage: Storage): void {
   if (typeof window !== 'undefined' && storage === localStorage) {
     window.dispatchEvent(new Event(TRANSPORT_PROFILES_CHANGED_EVENT));
   }
-}
-
-function environment(): TransportEnvironment {
-  return {
-    supabaseUrl: import.meta.env.VITE_COMMON_SUPABASE_URL?.trim(),
-    supabasePublishableKey: import.meta.env.VITE_COMMON_SUPABASE_PUBLISHABLE_KEY?.trim(),
-  };
 }
 
 function isLocalHost(hostname: string): boolean {
@@ -104,25 +93,11 @@ export function peerOptionsFromServerUrl(serverUrl: string): Record<string, unkn
   };
 }
 
-function builtInProfiles(env: TransportEnvironment): TransportProfile[] {
-  const profiles: TransportProfile[] = [
+function builtInProfiles(): TransportProfile[] {
+  return [
     { id: BUILTIN_PEERJS_ID, name: 'PeerJS / WebRTC', config: { adapter: 'peerjs' }, custom: false },
     { id: BUILTIN_LAN_ID, name: 'LAN Direct / LocalSend WebRTC', config: { adapter: 'lan' }, custom: false },
   ];
-  if (env.supabaseUrl && env.supabasePublishableKey) {
-    try {
-      profiles.push({
-        id: BUILTIN_SUPABASE_ID,
-        name: 'Common / Supabase Realtime',
-        config: validateTransportConfig({
-          adapter: 'common', provider: 'supabase', url: env.supabaseUrl,
-          publishableKey: env.supabasePublishableKey,
-        }),
-        custom: false,
-      });
-    } catch { /* Invalid deployment configuration is not offered. */ }
-  }
-  return profiles;
 }
 
 function loadCustomProfiles(storage: Storage): TransportProfile[] {
@@ -153,23 +128,23 @@ export function validateProfileName(name: string): string {
   return normalized;
 }
 
-export function getTransportProfiles(storage: Storage = localStorage, env = environment()): TransportProfile[] {
-  return [...builtInProfiles(env), ...loadCustomProfiles(storage)];
+export function getTransportProfiles(storage: Storage = localStorage): TransportProfile[] {
+  return [...builtInProfiles(), ...loadCustomProfiles(storage)];
 }
 
-export function getSelectedTransportProfile(storage: Storage = localStorage, env = environment()): TransportProfile {
-  const profiles = getTransportProfiles(storage, env);
+export function getSelectedTransportProfile(storage: Storage = localStorage): TransportProfile {
+  const profiles = getTransportProfiles(storage);
   let selectedId = storage.getItem(SELECTED_KEY);
   if (!selectedId) {
-    selectedId = storage.getItem(LEGACY_PREFERENCE_KEY) === 'common' ? BUILTIN_SUPABASE_ID : BUILTIN_PEERJS_ID;
+    selectedId = BUILTIN_PEERJS_ID;
   }
   const selected = profiles.find((profile) => profile.id === selectedId) ?? profiles[0]!;
   if (storage.getItem(SELECTED_KEY) !== selected.id) storage.setItem(SELECTED_KEY, selected.id);
   return selected;
 }
 
-export function selectTransportProfile(id: string, storage: Storage = localStorage, env = environment()): TransportProfile {
-  const profile = getTransportProfiles(storage, env).find((item) => item.id === id);
+export function selectTransportProfile(id: string, storage: Storage = localStorage): TransportProfile {
+  const profile = getTransportProfiles(storage).find((item) => item.id === id);
   if (!profile) throw new Error('Transport profile not found');
   storage.setItem(SELECTED_KEY, profile.id);
   if (profile.config.adapter === 'lan') storage.setItem(LAST_LAN_KEY, profile.id);
@@ -216,9 +191,8 @@ export function deleteCustomTransportProfile(id: string, storage: Storage = loca
 
 export function getLanDiscoveryConfig(
   storage: Storage = localStorage,
-  env = environment(),
 ): Extract<TransportConfig, { adapter: 'lan' }> {
-  const profiles = getTransportProfiles(storage, env);
+  const profiles = getTransportProfiles(storage);
   const lastId = storage.getItem(LAST_LAN_KEY) ?? BUILTIN_LAN_ID;
   const profile = profiles.find((item) => item.id === lastId && item.config.adapter === 'lan')
     ?? profiles.find((item) => item.id === BUILTIN_LAN_ID)!;
