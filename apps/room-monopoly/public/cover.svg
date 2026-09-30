@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Parti 大富翁</title>
+  <desc id="desc">城市棋盘、骰子、金币和摩天楼组成的多人经营游戏封面</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111936"/><stop offset="0.55" stop-color="#173e6a"/><stop offset="1" stop-color="#0c716f"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe49b"/><stop offset="1" stop-color="#efa62f"/>
+    </linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".3"/></filter>
+  </defs>
+  <rect width="1200" height="675" rx="34" fill="url(#bg)"/>
+  <circle cx="1040" cy="105" r="190" fill="#75e0d2" opacity=".1"/><circle cx="120" cy="650" r="270" fill="#8291ff" opacity=".1"/>
+  <g opacity=".28" fill="#b9eef1"><rect x="750" y="240" width="86" height="240" rx="8"/><rect x="850" y="155" width="120" height="325" rx="8"/><rect x="988" y="260" width="88" height="220" rx="8"/><rect x="1088" y="205" width="72" height="275" rx="8"/></g>
+  <g transform="translate(560 465) rotate(-5)" filter="url(#shadow)">
+    <rect x="-365" y="-95" width="730" height="190" rx="30" fill="#14284d" stroke="#72ddd0" stroke-width="7"/>
+    <g fill="#fff8e3" stroke="#20355c" stroke-width="4">
+      <rect x="-335" y="-65" width="105" height="58" rx="11"/><rect x="-217" y="-65" width="105" height="58" rx="11"/><rect x="-99" y="-65" width="105" height="58" rx="11"/><rect x="19" y="-65" width="105" height="58" rx="11"/><rect x="137" y="-65" width="105" height="58" rx="11"/><rect x="255" y="-65" width="80" height="58" rx="11"/>
+      <rect x="-335" y="12" width="105" height="52" rx="11"/><rect x="-217" y="12" width="105" height="52" rx="11"/><rect x="-99" y="12" width="105" height="52" rx="11"/><rect x="19" y="12" width="105" height="52" rx="11"/><rect x="137" y="12" width="105" height="52" rx="11"/><rect x="255" y="12" width="80" height="52" rx="11"/>
+    </g>
+    <g fill="#48c9ba"><rect x="-335" y="-65" width="105" height="11" rx="5"/><rect x="19" y="12" width="105" height="11" rx="5"/></g>
+    <g fill="#f0b647"><rect x="-217" y="-65" width="105" height="11" rx="5"/><rect x="137" y="12" width="105" height="11" rx="5"/></g>
+    <g fill="#7f8cff"><rect x="-99" y="-65" width="105" height="11" rx="5"/><rect x="-217" y="12" width="105" height="11" rx="5"/></g>
+    <g fill="#ef707b"><rect x="137" y="-65" width="105" height="11" rx="5"/><rect x="-99" y="12" width="105" height="11" rx="5"/></g>
+  </g>
+  <g transform="translate(855 455) rotate(10)" filter="url(#shadow)">
+    <rect x="-72" y="-72" width="144" height="144" rx="28" fill="#fff8e4" stroke="#efb14a" stroke-width="9"/>
+    <g fill="#163864"><circle cx="-31" cy="-31" r="11"/><circle cx="31" cy="-31" r="11"/><circle cx="0" cy="0" r="11"/><circle cx="-31" cy="31" r="11"/><circle cx="31" cy="31" r="11"/></g>
+  </g>
+  <g transform="translate(1015 530)" fill="url(#gold)" stroke="#a76d18" stroke-width="5" filter="url(#shadow)">
+    <ellipse cx="-42" cy="24" rx="45" ry="17"/><ellipse cx="18" cy="31" rx="45" ry="17"/><ellipse cx="-3" cy="2" rx="45" ry="17"/><ellipse cx="43" cy="5" rx="45" ry="17"/><ellipse cx="-43" cy="-22" rx="45" ry="17"/>
+  </g>
+  <g transform="translate(88 92)" font-family="system-ui,'PingFang SC','Microsoft YaHei',sans-serif">
+    <rect width="132" height="38" rx="19" fill="#75e0d2" opacity=".16"/><text x="66" y="26" text-anchor="middle" font-size="18" font-weight="700" fill="#bdf7ef" letter-spacing="2">PARTI ROOM</text>
+    <text x="0" y="120" font-size="80" font-weight="900" fill="#fff">Parti 大富翁</text>
+    <text x="4" y="172" font-size="29" font-weight="700" fill="#bdeaf0">买地 · 拍卖 · 股票 · 策略卡</text>
+    <text x="4" y="216" font-size="22" fill="#91cad5">2–6 人快节奏城市经营对决</text>
+  </g>
+</svg>

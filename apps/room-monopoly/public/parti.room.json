@@ -1,0 +1,28 @@
+{
+  "partiVersion": "0.1.0",
+  "protocolVersion": 1,
+  "id": "parti-monopoly",
+  "name": "Parti 大富翁",
+  "version": "0.2.0",
+  "packageMode": "filesystem",
+  "description": "沉浸式多人城市经营桌游：买地、拍卖、股票、策略卡、交易与岔路抉择。",
+  "author": {
+    "name": "glink25"
+  },
+  "entry": {
+    "ui": "index.html",
+    "worker": "room.worker.js"
+  },
+  "room": {
+    "minPlayers": 2,
+    "maxPlayers": 6
+  },
+  "sync": {
+    "mode": "snapshot"
+  },
+  "permissions": {
+    "network": false,
+    "storage": "session"
+  },
+  "cover": "cover.svg"
+}
