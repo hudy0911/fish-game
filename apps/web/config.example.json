@@ -1,0 +1,11 @@
+{
+  "port": 5157,
+  "oauth2": {
+    "clientId": "fish_8c48139f3a7d45ac",
+    "clientSecret": "f070a0caf40e3212b975831ee346fd29",
+    "redirectUri": "http://localhost:5157/api/auth/moyu/callback",
+    "scope": "read",
+    "stateSecret": "state-secret-must-be-at-least-16-chars",
+    "sessionSecret": "session-secret-must-be-at-least-16-chars"
+  }
+}

@@ -3,11 +3,10 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "baseUrl": ".",
     "paths": { "@/*": ["./src/*"] },
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "noEmit": false
   },
   "include": ["src/**/*", "src/i18n/messages/*.json"],

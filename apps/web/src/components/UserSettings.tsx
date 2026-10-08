@@ -1,19 +1,17 @@
+/**
+ * 头部「设置」按钮：仅作为打开 UserSettingsPanel 的入口。
+ * 用户身份完全由 FishUser 提供，不再展示本地用户名。
+ */
 import { lazy, Suspense, useState } from 'react';
 import { useIntl } from 'react-intl';
-import { UserRoundIcon } from 'lucide-react';
+import { SettingsIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { LocalUser } from '../lib/localUser';
 
 const UserSettingsPanel = lazy(() =>
   import('./UserSettingsPanel').then((module) => ({ default: module.UserSettingsPanel })),
 );
 
-type UserSettingsProps = {
-  user: LocalUser;
-  onChange: (user: LocalUser) => void;
-};
-
-export function UserSettings({ user, onChange }: UserSettingsProps) {
+export function UserSettings() {
   const intl = useIntl();
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -27,16 +25,16 @@ export function UserSettings({ user, onChange }: UserSettingsProps) {
     <>
       <Button
         variant="ghost"
-          className="max-w-[110px] gap-1.5 px-2 text-muted-foreground hover:text-foreground sm:max-w-[210px] sm:gap-2 sm:px-2.5"
-        aria-label={intl.formatMessage({ id: 'user.settings.ariaLabel' }, { name: user.name })}
+        size="icon-sm"
+        className="shrink-0 text-muted-foreground hover:text-foreground"
+        aria-label={intl.formatMessage({ id: 'user.settings.ariaLabel' })}
         onClick={openSettings}
       >
-        <UserRoundIcon />
-          <span className="truncate">{user.name}</span>
+        <SettingsIcon />
       </Button>
       {loaded && (
         <Suspense fallback={null}>
-          <UserSettingsPanel open={open} onOpenChange={setOpen} user={user} onChange={onChange} />
+          <UserSettingsPanel open={open} onOpenChange={setOpen} />
         </Suspense>
       )}
     </>

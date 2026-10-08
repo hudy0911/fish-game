@@ -32,6 +32,7 @@ import {
 import { buildAgentInviteUrl, buildInviteUrl, parsePeerRoute } from '../lib/peerRoutes';
 import { AgentRoomView } from './AgentRoomView';
 import { loadLocalUser } from '../lib/localUser';
+import { localUserToEffective } from '../lib/effectiveIdentity';
 import { useLocale } from '@/i18n/LocaleProvider';
 import { formatFetchPackageError, formatResolveError, formatRoomError } from '@/i18n/formatErrors';
 import { Button } from '@/components/ui/button';
@@ -146,6 +147,7 @@ function PeerHostSession({
   const [controlsOpen, setControlsOpen] = useState(false);
   const { fullscreen, setFullscreen } = usePageFullscreen();
   const localUser = loadLocalUser(undefined, locale);
+  const inviter = localUserToEffective(localUser);
   const [error, setError] = useState<string | null>(null);
   const [replayBusy, setReplayBusy] = useState(false);
   const [replayError, setReplayError] = useState<string | null>(null);
@@ -503,7 +505,7 @@ function PeerHostSession({
         open={qrOpen}
         onOpenChange={setQrOpen}
         inviteUrl={inviteUrl}
-        inviterName={localUser.name}
+        inviterName={inviter.name}
         roomTitle={roomTitle}
       />
       {fullscreen && <RoomControlsSheet open={controlsOpen} onOpenChange={setControlsOpen} props={controlsProps} />}
@@ -541,6 +543,7 @@ function PeerJoinView({
   }, []);
   const activeAttempt = useRef('');
   const localUser = loadLocalUser(undefined, locale);
+  const inviter = localUserToEffective(localUser);
 
   useEffect(() => {
     if (!initialCredential) return;
@@ -729,7 +732,7 @@ function PeerJoinView({
         open={qrOpen}
         onOpenChange={setQrOpen}
         inviteUrl={inviteUrl}
-        inviterName={localUser.name}
+        inviterName={inviter.name}
         roomTitle={state.roomTitle}
       />
       <LeaveRoomConfirmDialog

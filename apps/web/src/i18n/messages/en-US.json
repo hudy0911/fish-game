@@ -16,17 +16,11 @@
   },
   "user": {
     "settings": {
-      "title": "User settings",
-      "description": "This identity is saved in your browser and used when creating or joining rooms.",
       "sheetTitle": "Settings",
-      "sheetDescription": "Manage your local identity and interface preferences.",
-      "profileEyebrow": "Profile",
-      "profileTitle": "User settings",
-      "profileDescription": "This identity is saved in your browser and used when creating or joining rooms.",
+      "sheetDescription": "Manage your interface preferences and account link.",
+      "ariaLabel": "Open settings",
       "languageEyebrow": "Interface",
       "languageTitle": "Language",
-      "idInline": "ID: {id}",
-      "ariaLabel": "User settings: {name}",
       "transportEyebrow": "Online",
       "transportTitle": "Sync method",
       "transportDescription": "Choose the connection service for the next online room you create.",
@@ -80,10 +74,6 @@
       "profilesSupabaseByoHint": "Use a key from your own Supabase project. Realtime usage and billing are charged to that project.",
       "profilesCancel": "Cancel",
       "profilesSave": "Save",
-      "nameLabel": "Display name",
-      "nameHint": "Friends will recognize you by this name in rooms.",
-      "save": "Save name",
-      "saved": "Saved. It will apply on your next visit or reconnect.",
       "languageLabel": "Language",
       "languageHint": "Interface language, saved in this browser.",
       "donationEyebrow": "Support",
@@ -99,14 +89,24 @@
       "donationWalletLabel": "Wallet address",
       "clearData": "Clear data",
       "clearDataTitle": "Clear all local data?",
-      "clearDataDescription": "This will permanently delete all data saved in this browser (including your profile, templates, rooms, and replays). This cannot be undone. Continue?",
+      "clearDataDescription": "This will permanently delete all data saved in this browser (except your Fish Island account), including templates, rooms, and replays. Continue?",
       "clearDataCancel": "Cancel",
-      "clearDataConfirm": "Clear and reload"
-    },
-    "validation": {
-      "empty": "Display name cannot be empty",
-      "tooLong": "Display name cannot exceed {max} characters"
+      "clearDataConfirm": "Clear and reload",
+      "fishEyebrow": "Account",
+      "fishTitle": "Fish Island account",
+      "fishDescription": "When signed in, rooms use your Fish Island nickname and avatar.",
+      "fishLogin": "Sign in with Fish Island",
+      "fishUnlink": "Sign out",
+      "fishLinkedHint": "You're using this account for room display names.",
+      "fishUnlinkedHint": "Not signed in. Sign in to show your Fish Island name in rooms and on invites."
     }
+  },
+  "auth": {
+    "login": "Sign in with Fish Island",
+    "logoutAria": "Signed in as {name}. Click to sign out.",
+    "logoutTitle": "Sign out of Fish Island",
+    "error": "Fish Island sign-in failed: {code}",
+    "startFailed": "Could not start Fish Island sign-in: {error}"
   },
   "randomName": {
     "adjectives": ["Happy", "Brave", "Shiny", "Chill", "Clever", "Gentle", "Lucky", "Eager"],

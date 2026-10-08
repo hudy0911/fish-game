@@ -16,17 +16,11 @@
   },
   "user": {
     "settings": {
-      "title": "用户设置",
-      "description": "这个身份保存在当前浏览器中，并用于创建或加入房间。",
       "sheetTitle": "设置",
-      "sheetDescription": "管理你的本地身份与界面偏好。",
-      "profileEyebrow": "用户",
-      "profileTitle": "用户设置",
-      "profileDescription": "这个身份保存在当前浏览器中，并用于创建或加入房间。",
+      "sheetDescription": "管理你的界面偏好和账号绑定。",
+      "ariaLabel": "打开设置",
       "languageEyebrow": "界面",
       "languageTitle": "语言设置",
-      "idInline": "ID: {id}",
-      "ariaLabel": "用户设置：{name}",
       "transportEyebrow": "联机",
       "transportTitle": "同步方式",
       "transportDescription": "选择下一次创建在线房间使用的连接服务。",
@@ -80,10 +74,6 @@
       "profilesSupabaseByoHint": "Supabase 配置必须来自你自己的项目；Realtime 用量和费用由该项目承担。",
       "profilesCancel": "取消",
       "profilesSave": "保存",
-      "nameLabel": "用户名",
-      "nameHint": "朋友会在房间中通过这个名称认出你。",
-      "save": "保存用户名",
-      "saved": "已保存，将在下次进入或重连房间时生效。",
       "languageLabel": "语言",
       "languageHint": "界面显示语言，保存在当前浏览器中。",
       "donationEyebrow": "支持",
@@ -99,14 +89,24 @@
       "donationWalletLabel": "钱包地址",
       "clearData": "清除数据",
       "clearDataTitle": "确定清除所有本地数据？",
-      "clearDataDescription": "这将删除本浏览器中保存的所有数据（包括用户信息、模版、房间、回放等），且无法找回。是否继续？",
+      "clearDataDescription": "这将删除本浏览器中保存的所有数据（包括摸鱼岛之外的本地缓存、模版、房间、回放等），且无法找回。是否继续？",
       "clearDataCancel": "取消",
-      "clearDataConfirm": "清除并刷新"
-    },
-    "validation": {
-      "empty": "用户名不能为空",
-      "tooLong": "用户名不能超过 {max} 个字符"
+      "clearDataConfirm": "清除并刷新",
+      "fishEyebrow": "账号",
+      "fishTitle": "用户设置",
+      "fishDescription": "登录后房间中的玩家昵称和头像会使用用户设置的昵称和头像。",
+      "fishLogin": "使用用户设置登录",
+      "fishUnlink": "退出登录",
+      "fishLinkedHint": "当前以该身份进入房间，朋友会看到对应的昵称。",
+      "fishUnlinkedHint": "尚未登录。登录后房间会使用用户设置的昵称和头像，朋友扫码时也能看到你的名字。"
     }
+  },
+  "auth": {
+    "login": "摸鱼岛登录",
+    "logoutAria": "已登录为 {name}，点击退出",
+    "logoutTitle": "退出摸鱼岛登录",
+    "error": "摸鱼岛登录失败：{code}",
+    "startFailed": "无法启动摸鱼岛登录：{error}"
   },
   "randomName": {
     "adjectives": ["快乐", "勇敢", "闪亮", "悠闲", "机灵", "温柔", "幸运", "热情"],

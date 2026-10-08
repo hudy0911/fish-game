@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { defineConfig, loadEnv, type Plugin } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { authMiddlewarePlugin, denyLocalConfigsPlugin } from './src/server/auth/vitePlugin.js';
+import { gaSnippetPlugin } from './src/server/analytics/gaSnippet.js';
 
 /**
  * 在构建/开发期扫描 public/rooms/ 下的内置模板，生成虚拟模块 `virtual:room-registry`。
@@ -71,23 +73,6 @@ function roomRegistryPlugin(): Plugin {
   };
 }
 
-/** 从 GA_MEASUREMENT_SNIPPET 环境变量注入 head 内 analytics 片段，源码中不包含 GA 代码。 */
-function gaSnippetPlugin(): Plugin {
-  let snippet = '';
-
-  return {
-    name: 'parti-ga-snippet',
-    config(_, { mode }) {
-      const env = loadEnv(mode, __dirname, '');
-      snippet = env.GA_MEASUREMENT_SNIPPET?.trim() ?? '';
-    },
-    transformIndexHtml(html) {
-      if (!snippet) return html;
-      return html.replace('</head>', `  ${snippet}\n</head>`);
-    },
-  };
-}
-
 function webVendorChunk(id: string): string | undefined {
   if (!id.includes('/node_modules/')) return undefined;
   if (
@@ -116,12 +101,20 @@ function webVendorChunk(id: string): string | undefined {
 }
 
 export default defineConfig({
-  plugins: [roomRegistryPlugin(), gaSnippetPlugin(), react(), tailwindcss()],
+  plugins: [
+    roomRegistryPlugin(),
+    authMiddlewarePlugin(),
+    denyLocalConfigsPlugin(),
+    gaSnippetPlugin(),
+    react(),
+    tailwindcss(),
+  ],
   server: {
     port: 5157,
     headers: { 'Permissions-Policy': 'accelerometer=(self), gyroscope=(self), magnetometer=(self)' },
   },
   preview: {
+    port: 5157,
     headers: { 'Permissions-Policy': 'accelerometer=(self), gyroscope=(self), magnetometer=(self)' },
   },
   resolve: {

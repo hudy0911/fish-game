@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useIntl } from 'react-intl';
 import { CircleCheckIcon, CoffeeIcon, GaugeIcon, NetworkIcon } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -11,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -29,16 +29,16 @@ import {
 } from '@/components/ui/sheet';
 import { LOCALE_LABELS, LOCALES, type AppLocale } from '@/i18n/locales';
 import { useLocale } from '@/i18n/LocaleProvider';
-import { formatUserNameError } from '@/i18n/formatErrors';
 import { DonationDialog } from './DonationDialog';
 import { TransportProfilesDialog } from './TransportProfilesDialog';
 import { clearAllBrowserStorage } from '../lib/clearLocalData';
 import {
-  MAX_USER_NAME_LENGTH,
-  saveLocalUserName,
-  UserNameValidationError,
-  type LocalUser,
-} from '../lib/localUser';
+  getCachedFishUser,
+  logoutFishUser,
+  refreshFishUser,
+  subscribeFishUser,
+  type FishUser,
+} from '../lib/fishUser';
 import {
   getSelectedTransportProfile,
   getTransportProfiles,
@@ -58,30 +58,29 @@ function transportMessageSuffix(config: TransportConfig): 'peerjs' | 'lan' | 'su
 type UserSettingsPanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  user: LocalUser;
-  onChange: (user: LocalUser) => void;
 };
 
-export function UserSettingsPanel({ open, onOpenChange, user, onChange }: UserSettingsPanelProps) {
+export function UserSettingsPanel({ open, onOpenChange }: UserSettingsPanelProps) {
   const intl = useIntl();
   const { locale, setLocale } = useLocale();
-  const [draft, setDraft] = useState(user.name);
-  const [message, setMessage] = useState<string | null>(null);
   const [profilesVersion, setProfilesVersion] = useState(0);
   const [profilesOpen, setProfilesOpen] = useState(false);
   const [donationOpen, setDonationOpen] = useState(false);
   const [clearDataOpen, setClearDataOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [fishUser, setFishUser] = useState<FishUser | null>(() => getCachedFishUser());
+  const [fishBusy, setFishBusy] = useState(false);
   const profiles = getTransportProfiles();
   const selectedProfile = getSelectedTransportProfile();
   const transportSuffix = transportMessageSuffix(selectedProfile.config);
 
   useEffect(() => {
     if (open) {
-      setDraft(user.name);
-      setMessage(null);
+      void refreshFishUser();
     }
-  }, [open, user.name]);
+  }, [open]);
+
+  useEffect(() => subscribeFishUser(setFishUser), []);
 
   async function handleClearData(): Promise<void> {
     setClearing(true);
@@ -90,6 +89,27 @@ export function UserSettingsPanel({ open, onOpenChange, user, onChange }: UserSe
       window.location.reload();
     } catch {
       setClearing(false);
+    }
+  }
+
+  async function handleFishLogout(): Promise<void> {
+    setFishBusy(true);
+    try {
+      await logoutFishUser();
+    } finally {
+      setFishBusy(false);
+    }
+  }
+
+  async function handleFishLogin(): Promise<void> {
+    setFishBusy(true);
+    try {
+      const { startFishOAuth } = await import('../lib/fishUser');
+      await startFishOAuth('#/');
+    } catch (reason) {
+      setFishBusy(false);
+      const message = reason instanceof Error ? reason.message : String(reason);
+      toast.error(intl.formatMessage({ id: 'auth.startFailed' }, { error: message }));
     }
   }
 
@@ -107,53 +127,58 @@ export function UserSettingsPanel({ open, onOpenChange, user, onChange }: UserSe
           <Card className={sectionCardClass}>
             <CardHeader>
               <span className="text-[9px] font-extrabold tracking-[0.14em] text-primary-bright uppercase">
-                {intl.formatMessage({ id: 'user.settings.profileEyebrow' })}
+                {intl.formatMessage({ id: 'user.settings.fishEyebrow' })}
               </span>
-              <CardTitle className="mt-1 text-lg">{intl.formatMessage({ id: 'user.settings.profileTitle' })}</CardTitle>
-              <CardDescription>{intl.formatMessage({ id: 'user.settings.profileDescription' })}</CardDescription>
+              <CardTitle className="mt-1 text-lg">
+                {intl.formatMessage({ id: 'user.settings.fishTitle' })}
+              </CardTitle>
+              <CardDescription>
+                {intl.formatMessage({ id: 'user.settings.fishDescription' })}
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form
-                className="flex flex-col gap-4"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  try {
-                    const next = saveLocalUserName(draft);
-                    onChange(next);
-                    setDraft(next.name);
-                    setMessage(intl.formatMessage({ id: 'user.settings.saved' }));
-                  } catch (error) {
-                    if (error instanceof UserNameValidationError) {
-                      setMessage(formatUserNameError(intl, error));
-                    } else {
-                      setMessage(error instanceof Error ? error.message : String(error));
-                    }
-                  }
-                }}
-              >
-                <div className="grid gap-2">
-                  <Label htmlFor="parti-user-name">{intl.formatMessage({ id: 'user.settings.nameLabel' })}</Label>
-                  <Input
-                    id="parti-user-name"
-                    value={draft}
-                    maxLength={MAX_USER_NAME_LENGTH}
-                    autoComplete="nickname"
-                    onChange={(event) => setDraft(event.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">{intl.formatMessage({ id: 'user.settings.nameHint' })}</p>
-                </div>
-                <div className="grid gap-3">
-                  {message && (
-                    <p className="text-sm text-muted-foreground" role="status">
-                      {message}
-                    </p>
-                  )}
-                  <Button type="submit">{intl.formatMessage({ id: 'user.settings.save' })}</Button>
-                </div>
-                <p className="font-mono text-[10px] text-muted-foreground/70">
-                  {intl.formatMessage({ id: 'user.settings.idInline' }, { id: user.id })}
-                </p>
-              </form>
+            <CardContent className="grid gap-3">
+              {fishUser ? (
+                <>
+                  <div className="flex items-center gap-3 rounded-xl border border-border bg-background/55 p-3">
+                    {fishUser.avatar ? (
+                      <img
+                        src={fishUser.avatar}
+                        alt=""
+                        className="size-10 rounded-full border border-border object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="grid size-10 place-items-center rounded-full bg-primary/20 text-sm font-semibold text-primary-bright">
+                        {fishUser.name.slice(0, 1)}
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-foreground">{fishUser.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">@{fishUser.username}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {intl.formatMessage({ id: 'user.settings.fishLinkedHint' })}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void handleFishLogout()}
+                    disabled={fishBusy}
+                  >
+                    {intl.formatMessage({ id: 'user.settings.fishUnlink' })}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    {intl.formatMessage({ id: 'user.settings.fishUnlinkedHint' })}
+                  </p>
+                  <Button type="button" onClick={handleFishLogin}>
+                    {intl.formatMessage({ id: 'user.settings.fishLogin' })}
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
 

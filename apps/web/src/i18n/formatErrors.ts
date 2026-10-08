@@ -3,7 +3,6 @@ import { ImportRoomError } from '@/lib/importRoom';
 import { MarketError } from '@/lib/market';
 import type { FetchPackageError } from '@/lib/fetchPackageOverPeer';
 import type { LobbyStatusKey } from '@/lib/lobbyApi';
-import type { UserNameValidationError } from '@/lib/localUser';
 import { PackageSourceNotFoundError } from '@/lib/rooms';
 import { RoomSnapshotNotFoundError } from '@/lib/customRooms';
 
@@ -23,13 +22,6 @@ export function formatImportError(intl: IntlShape, error: ImportRoomError): stri
 
 export function formatFetchPackageError(intl: IntlShape, error: FetchPackageError): string {
   return intl.formatMessage({ id: `peer.fetchPackage.${error.code}` });
-}
-
-export function formatUserNameError(intl: IntlShape, error: UserNameValidationError): string {
-  if (error.code === 'tooLong') {
-    return intl.formatMessage({ id: 'user.validation.tooLong' }, { max: error.maxLength });
-  }
-  return intl.formatMessage({ id: 'user.validation.empty' });
 }
 
 export function formatTemplateFallback(intl: IntlShape, key: 'customRoom' | 'importedTemplate'): string {

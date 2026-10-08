@@ -26,6 +26,7 @@ import { createWebWorkerHost } from './roomWorker';
 import { ReconnectingClient } from './ReconnectingClient';
 import { clearHostRoomSettings } from './roomSettings';
 import { loadLocalUser } from './localUser';
+import { localUserToEffective } from './effectiveIdentity';
 import { createTransportAdapter, type TransportConfig } from './transportConfig';
 
 /**
@@ -79,6 +80,7 @@ export async function createPeerHost(
 ): Promise<PeerHost> {
   const store = new SessionStorageStore();
   const user = loadLocalUser();
+  const identity = localUserToEffective(user);
   const roomId = pkg.manifest.id;
   // 恢复与否完全交给 sessionStorage：刷新时记录仍在 → 恢复现场；关闭标签页或
   // 退出到大厅（已 clearRoomSession）后记录不在 → 全新房间。
@@ -99,8 +101,8 @@ export async function createPeerHost(
     manifest: pkg.manifest,
     // 透传全部文件，使 host 能响应加入者的 sys:package-request 点对点下发房间代码。
     packageFiles: encodeFilesBase64(pkg.files),
-    hostName: user.name,
-    hostClientId: user.id,
+    hostName: identity.name,
+    hostClientId: identity.id,
     store,
     ...(options.admissionController
       ? { admissionController: options.admissionController }
@@ -152,7 +154,10 @@ export function createPeerJoin(
 ): PeerJoin {
   const roomId = pkg.manifest.id;
   const user = loadLocalUser();
-  const name = playerName?.trim() ? playerName.trim().slice(0, 24) : user.name;
+  const identity = localUserToEffective(user);
+  const name = playerName?.trim()
+    ? playerName.trim().slice(0, 24)
+    : identity.name;
 
   const client = new ReconnectingClient({
     roomId,
@@ -160,7 +165,7 @@ export function createPeerJoin(
     hostPeerId,
     transportConfig,
     playerName: name,
-    clientId: user.id,
+    clientId: identity.id,
     ...(credential !== undefined ? { credential } : {}),
     ...(handlers.onStatus ? { onStatus: handlers.onStatus } : {}),
     ...(handlers.onFatal ? { onFatal: handlers.onFatal } : {}),

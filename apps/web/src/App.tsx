@@ -1,16 +1,17 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
+import { toast } from 'sonner';
 import { ArrowLeftIcon } from 'lucide-react';
 import { GithubIcon } from '@/components/icons/GithubIcon';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
 import { Lobby } from './pages/Lobby';
-import { loadLocalUser } from './lib/localUser';
+import { getCachedFishUser, refreshFishUser, subscribeFishUser, startFishOAuth } from './lib/fishUser';
 import { UserSettings } from './components/UserSettings';
+import { LoginButton } from './components/LoginButton';
 import { TransportIndicator } from './components/TransportIndicator';
 import { PageFullscreenProvider, usePageFullscreen } from './components/PageFullscreen';
-import { useLocale } from './i18n/LocaleProvider';
 import { ENABLE_REPLAYS } from './lib/featureFlags';
 import { deleteRoomSnapshot } from './lib/customRooms';
 
@@ -50,14 +51,39 @@ function ownedRoomIdOf(hash: string): string | null {
 
 function AppLayout() {
   const hash = useHashRoute();
-  const { locale } = useLocale();
   const intl = useIntl();
-  const [user, setUser] = useState(() => loadLocalUser(undefined, locale));
+  const [authReady, setAuthReady] = useState(false);
+  const [fishUser, setFishUser] = useState(() => getCachedFishUser());
   const { fullscreen, setFullscreen } = usePageFullscreen();
 
   useEffect(() => {
-    setUser(loadLocalUser(undefined, locale));
-  }, [locale]);
+    let cancelled = false;
+    void refreshFishUser().finally(() => {
+      if (!cancelled) setAuthReady(true);
+    });
+    return subscribeFishUser(setFishUser);
+  }, []);
+
+  // 未登录拦截：所有路由都要求先登录；未登录时跳转到摸鱼岛 OAuth，回调后回到当前 hash。
+  useEffect(() => {
+    if (!authReady) return;
+    if (fishUser) return;
+    const next = window.location.hash || '#/';
+    void startFishOAuth(next).catch((reason) => {
+      const message = reason instanceof Error ? reason.message : String(reason);
+      toast.error(intl.formatMessage({ id: 'auth.startFailed' }, { error: message }));
+    });
+  }, [authReady, fishUser, intl]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorCode = params.get('oauth_error');
+    if (!errorCode) return;
+    params.delete('oauth_error');
+    const nextSearch = params.size ? `?${params.toString()}` : '';
+    history.replaceState(null, '', `${location.pathname}${nextSearch}${location.hash}`);
+    toast.error(intl.formatMessage({ id: 'auth.error' }, { code: errorCode }));
+  }, [intl]);
 
   useEffect(() => {
     setFullscreen(false);
@@ -136,7 +162,8 @@ function AppLayout() {
             )}
             <div className="ml-auto flex shrink-0 items-center gap-1">
               <TransportIndicator />
-              {isLobbyRoute && <UserSettings user={user} onChange={setUser} />}
+              <LoginButton />
+              {isLobbyRoute && <UserSettings />}
             </div>
           </div>
         </header>
