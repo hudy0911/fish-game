@@ -17,3 +17,4 @@ supabase
 dev-only
 .tinify_api_key
 apps/web/config.local.json
+data/

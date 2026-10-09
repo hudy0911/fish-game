@@ -7,7 +7,7 @@ Type=simple
 User=www-data
 WorkingDirectory=/opt/fish-game
 Environment=NODE_ENV=production
-Environment=PORT=3000
+Environment=PORT=5157
 Environment=HOST=127.0.0.1
 # 逗号分隔的 Web 域名（你的 https 域名）
 Environment=ALLOWED_ORIGINS=https://lobby.example.com

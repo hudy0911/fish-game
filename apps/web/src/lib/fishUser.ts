@@ -33,6 +33,15 @@ interface CachedEntry {
 const CACHE_KEY = 'parti:fishUser';
 
 let cachedUser: FishUser | null = readFromStorage();
+/**
+ * 启动时是否读到过缓存。仅决定后续 /me 401 的处理策略：
+ *   - true: 401 视作"服务端 session 临时不可用"（例如重启），保留缓存。
+ *           避免用户每次刷新或后端短暂重启就被踢回登录页——前端用户态本身
+ *           是 localStorage 缓存的目的就是对抗服务端 session 失效。
+ *   - false: 401 表示"用户从未登录或主动退出"，正常清缓存触发 OAuth。
+ * 启动后此值不再变化，逻辑是只读快照。
+ */
+const hadCacheOnBoot: boolean = cachedUser !== null;
 let inflight: Promise<FishUser | null> | null = null;
 const listeners = new Set<(user: FishUser | null) => void>();
 
@@ -105,8 +114,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
  * 统一走 startFishOAuth 跳 yucoder。不直接跳 /login，是为了避免和现有
  * 的路由（hash 路由）逻辑冲突——刷新后 fishUser 变 null 时，App.tsx
  * 的拦截 effect 会自己处理跳转。
+ *
+ * 如果启动时就有缓存（hadCacheOnBoot），说明这是"启动到本 session 一直
+ * 都有用户态"，401 更可能是"后端 session 丢失/重启"，不应清缓存——
+ * 否则每次服务重启都会强制用户重走一遍 OAuth2，破坏 localStorage 缓存
+ * 的初衷。
  */
 function invalidateSilently(): void {
+  if (hadCacheOnBoot) {
+    return;
+  }
   cachedUser = null;
   writeToStorage(null);
   notify();

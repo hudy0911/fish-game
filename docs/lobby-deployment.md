@@ -14,16 +14,16 @@
 `pnpm start` 启动 `scripts/start.mjs`，**同进程内**做了三件事：
 
 ```
-┌─────────────── PORT=3000 (公开) ───────────────┐
+┌─────────────── PORT=5157 (公开) ───────────────┐
 │  scripts/start.mjs                             │
 │                                                │
-│   /v1/*  ──▶  反代到 127.0.0.1:3001            │
+│   /v1/*  ──▶  反代到 127.0.0.1:5158            │
 │   其它   ──▶  serve apps/web/dist/ + SPA fallback│
 └─────────────────────┬──────────────────────────┘
                       │ spawn 子进程
                       ▼
           ┌──────────────────────┐
-          │ scripts/lobby-mock   │  0.0.0.0:127.0.0.1:3001
+          │ scripts/lobby-mock   │  0.0.0.0:127.0.0.1:5158
           │ + data/lobby.json    │  ← 持久化
           └──────────────────────┘
 ```
@@ -65,7 +65,7 @@ pnpm build:web
 ### 临时启动（调试）
 
 ```bash
-ALLOWED_ORIGINS=https://lobby.example.com PORT=3000 \
+ALLOWED_ORIGINS=https://lobby.example.com PORT=5157 \
   LOBBY_STORAGE_FILE=/var/lib/fish-game/lobby.json \
   node scripts/start.mjs
 ```
@@ -73,7 +73,7 @@ ALLOWED_ORIGINS=https://lobby.example.com PORT=3000 \
 输出类似：
 
 ```
-[start] listening on http://0.0.0.0:3000
+[start] listening on http://0.0.0.0:5157
 [start] lobby storage: /var/lib/fish-game/lobby.json
 [start] CORS allow: https://lobby.example.com
 [start] static dir: .../apps/web/dist
@@ -101,7 +101,7 @@ sudo apt install -y caddy
 
 ```
 lobby.example.com {
-    reverse_proxy 127.0.0.1:3000
+    reverse_proxy 127.0.0.1:5157
 }
 ```
 
@@ -111,7 +111,7 @@ sudo systemctl reload caddy
 
 Caddy 会自动签发并续期 Let's Encrypt 证书。
 
-如果你已经有 Nginx，把 `lobby.example.com` 反代到 `127.0.0.1:3000` 即可。
+如果你已经有 Nginx，把 `lobby.example.com` 反代到 `127.0.0.1:5157` 即可。
 
 ## 6. Web 端怎么连上
 
@@ -129,9 +129,9 @@ VITE_LOBBY_SERVICE_URL=https://lobby.example.com
 
 | 变量 | 默认 | 说明 |
 | --- | --- | --- |
-| `PORT` | `3000` | start.mjs 对外端口 |
+| `PORT` | `5157` | start.mjs 对外端口 |
 | `HOST` | `0.0.0.0` | 绑定地址 |
-| `LOBBY_INTERNAL` | `3001` | mock 子进程端口（用户不应访问） |
+| `LOBBY_INTERNAL` | `5158` | mock 子进程端口（用户不应访问） |
 | `LOBBY_STORAGE_FILE` | `data/lobby.json` | 持久化文件，建议放 `/var/lib/...` |
 | `ALLOWED_ORIGINS` | （空，全开） | 逗号分隔的 Web Origin 列表。**生产必填** |
 | `STATIC_DIR` | `apps/web/dist` | start.mjs 服务的静态目录 |

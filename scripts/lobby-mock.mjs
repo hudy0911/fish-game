@@ -18,8 +18,8 @@
  * 用法：
  *   node scripts/lobby-mock.mjs                                  # 默认 http://127.0.0.1:5158
  *   PORT=6000 node scripts/lobby-mock.mjs                        # 自定义端口
- *   NODE_ENV=production PORT=3000 ALLOWED_ORIGINS=https://a.com,https://b.com \
- *     STORAGE_FILE=/var/lib/parti/lobby.json node scripts/lobby-mock.mjs
+ *   NODE_ENV=production PORT=5158 ALLOWED_ORIGINS=https://a.com,https://b.com \
+ *     STORAGE_FILE=/var/lib/fish-game/lobby.json node scripts/lobby-mock.mjs
  */
 import { randomUUID, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -27,7 +27,7 @@ import { dirname } from 'node:path';
 import { createServer as createHttpServer } from 'node:http';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-const PORT = Number.parseInt(process.env.PORT ?? (IS_PRODUCTION ? '3000' : '5158'), 10) || 5158;
+const PORT = Number.parseInt(process.env.PORT ?? '5158', 10) || 5158;
 const HOST = process.env.HOST ?? (IS_PRODUCTION ? '0.0.0.0' : '127.0.0.1');
 const LEASE_TTL_MS = 60_000;
 const MAX_BODY_BYTES = 12 * 1024;
