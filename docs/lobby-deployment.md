@@ -1,5 +1,8 @@
 # 大厅后端生产部署
 
+> **想 10 分钟跑通？** 先看 [lobby-deploy-quick.md](./lobby-deploy-quick.md)（精简版）。
+> 本文档是**完整版**：原理 + 所有环境变量 + 故障排查 + 升级路径。
+
 项目内自带一个**轻量、生产可用**的大厅服务：`scripts/lobby-mock.mjs`。本仓库的
 "mock" 不是"开发期假实现"——它实现了 [lobby-service.md](./lobby-service.md) 的全
 部契约（GET /v1/health、GET/POST/PATCH/DELETE /v1/rooms、60s 租约、leaseToken 鉴
