@@ -18,12 +18,21 @@ export interface AuthApp {
  * 创建 express app 实例。注意：
  *   - 不在此调用 app.listen()，因为 dev/preview 由 Vite 的 httpServer 统一监听 5157；
  *   - session cookie name 保持 'parti.sid'，与原 @parti/api 一致，避免迁移时 cookie 失效。
+ *   - session store 走 express-session 默认的内存 store。用户态展示由前端
+ *     localStorage 缓存（apps/web/src/lib/fishUser.ts），后端 session 仅
+ *     作为 /me 校验的事实来源；重启服务时浏览器内缓存的前端用户态仍可立即
+ *     展示给用户，后台 /me 会以 401 触发前端清缓存并跳 OAuth。
  */
 export function createAuthApp(config: AppConfig): AuthApp {
   const app = express();
 
   app.use(express.json({ limit: '32kb' }));
   app.use(cookieParser());
+
+  // 生产 https 部署时把 cookie.secure 设 true；通过 PARTI_COOKIE_SECURE=1 显式开启
+  // （自动检测 X-Forwarded-Proto 留给反代层做；这里只认显式开关）。
+  const cookieSecure = process.env.PARTI_COOKIE_SECURE === '1'
+    || process.env.PARTI_COOKIE_SECURE === 'true';
 
   app.use(
     session({
@@ -34,7 +43,7 @@ export function createAuthApp(config: AppConfig): AuthApp {
       cookie: {
         httpOnly: true,
         sameSite: 'lax',
-        secure: false, // 本地 http 调试，部署到 https 时改 true
+        secure: cookieSecure,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 天
       },
     }),

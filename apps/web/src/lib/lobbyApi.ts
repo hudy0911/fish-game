@@ -9,10 +9,9 @@ export type LobbyJsonValue =
 export interface LobbyRoom {
   listingId: string;
   roomId: string;
+  hostPeerId: string;
   connectionInfo?: string;
   transportConfig?: import('./transportConfig').TransportConfig;
-  /** v1 compatibility */
-  hostPeerId?: string;
   title: string;
   packageName: string;
   playerCount: number;

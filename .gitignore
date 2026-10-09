@@ -9,6 +9,8 @@ apps/web/public/rooms/room-*
 .claude
 .pnpm-store
 .env
+.env.*
+!.env.example
 .agents
 skills-lock.json
 supabase

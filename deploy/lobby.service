@@ -1,0 +1,34 @@
+[Unit]
+Description=Parti Lobby (Web + mock 大厅)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/fish-game
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOST=127.0.0.1
+# 逗号分隔的 Web 域名（你的 https 域名）
+Environment=ALLOWED_ORIGINS=https://lobby.example.com
+# 持久化目录，提前建好：sudo install -d -o www-data /var/lib/fish-game
+Environment=LOBBY_STORAGE_FILE=/var/lib/fish-game/lobby.json
+ExecStart=/usr/bin/node scripts/start.mjs
+Restart=on-failure
+RestartSec=5
+# 写入 systemd-journald，无需自己 rotate
+StandardOutput=journal
+StandardError=journal
+
+# 资源上限（按需调）
+LimitNOFILE=65535
+
+# 安全加固
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/fish-game
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

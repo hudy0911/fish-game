@@ -782,6 +782,7 @@ function lobbyInput(
 ): LobbyRoomInput {
   return {
     roomId: pkg.manifest.id,
+    hostPeerId: connectionInfo,
     connectionInfo,
     transportConfig,
     title: settings.title.trim() || pkg.manifest.name,
