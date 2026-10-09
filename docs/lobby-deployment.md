@@ -132,7 +132,7 @@ VITE_LOBBY_SERVICE_URL=https://lobby.example.com
 | `PORT` | `5157` | start.mjs 对外端口 |
 | `HOST` | `0.0.0.0` | 绑定地址 |
 | `LOBBY_INTERNAL` | `5158` | mock 子进程端口（用户不应访问） |
-| `LOBBY_STORAGE_FILE` | `data/lobby.json` | 持久化文件，建议放 `/var/lib/...` |
+| `LOBBY_STORAGE_FILE` | `data/lobby.json` | 持久化文件，默认写到 `./data/lobby.json`（`data/` 在 .gitignore 不会入仓）。生产部署可设 `/var/lib/.../lobby.json` |
 | `ALLOWED_ORIGINS` | （空，全开） | 逗号分隔的 Web Origin 列表。**生产必填** |
 | `STATIC_DIR` | `apps/web/dist` | start.mjs 服务的静态目录 |
 

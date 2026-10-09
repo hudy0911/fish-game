@@ -22,7 +22,7 @@
  *   HOST               绑定地址，默认 0.0.0.0
  *   LOBBY_INTERNAL     mock 内部端口，默认 5158
  *   STATIC_DIR         静态目录，默认 apps/web/dist
- *   LOBBY_STORAGE_FILE 持久化文件，默认 data/lobby.json
+ *   LOBBY_STORAGE_FILE 持久化文件，默认 data/lobby.json（data/ 在 .gitignore）
  *   ALLOWED_ORIGINS    CORS 白名单（生产必填，逗号分隔）
  *   PARTI_WEB_PORT     OAuth2 配置里的 port，影响默认 redirect_uri（默认 5157）
  *   PARTI_OAUTH2_*     OAuth2 凭据（不写则从 apps/web/config.local.json 读）
@@ -44,6 +44,7 @@ const PORT            = Number.parseInt(process.env.PORT ?? '5157', 10) || 5157;
 const HOST            = process.env.HOST ?? '0.0.0.0';
 const LOBBY_INTERNAL  = Number.parseInt(process.env.LOBBY_INTERNAL ?? '5158', 10) || 5158;
 const STATIC_DIR      = resolve(rootDir, process.env.STATIC_DIR ?? 'apps/web/dist');
+// 默认持久化到 ./data/lobby.json；data/ 已被 .gitignore 忽略，不会入仓。
 const LOBBY_STORAGE   = process.env.LOBBY_STORAGE_FILE
   ?? resolve(rootDir, 'data/lobby.json');
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? '')
