@@ -1,45 +1,72 @@
-# 大厅 10 分钟部署
+# 大厅 10 分钟部署（Docker）
 
-把整套 Web + 大厅后端 **从零** 部署到一台 Linux VPS，并套上 HTTPS。  
-只跑一条 `pnpm start` 就完事——Web 静态 + 大厅 API + 持久化全在一个进程里。
+把整套 Web + 大厅后端打包成**一个 Docker 镜像**。`docker run` 一条命令就起，
+配套 Caddy 自动签 HTTPS。适合**不想装 Node / pnpm / systemd** 的人。
 
-## 1. 准备一台 Linux VPS
+镜像里只跑 `scripts/start.mjs` 一个进程：对外服务 `apps/web/dist/`，反代
+`/v1/*` 到内置的 lobby-mock 子进程，并把房间列表持久化到一个挂载卷。
 
-任意 Ubuntu 22.04 / Debian 12，1 核 1G 内存就够。
+## 1. 准备一台 Linux VPS + 域名
 
-```bash
-# 装 Node.js 20+
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt update && sudo apt install -y nodejs git
-
-# 装 pnpm
-corepack enable
-corepack prepare pnpm@10.15.1 --activate
-```
-
+任意 Ubuntu 22.04 / Debian 12，1 核 1G 内存就够。  
 准备一个**域名**（下文用 `lobby.example.com`），先把 DNS A 记录指到 VPS 公网 IP。
 
-## 2. 拉代码 + 构建
+## 2. 在 VPS 上装 Docker
 
 ```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+# 重新登录 shell 让 docker 组生效
+```
+
+## 3. 构建并启动容器
+
+```bash
+# 把代码拉到 VPS 上（任选一种方式：git clone / scp / rsync）
 git clone https://github.com/<你的fork>/fish-game.git
 cd fish-game
-pnpm install --frozen-lockfile
-pnpm build:web
+
+docker build -t fish-lobby .
+
+docker run -d \
+  --name fish-lobby \
+  --restart unless-stopped \
+  -p 127.0.0.1:5157:5157 \
+  -e ALLOWED_ORIGINS=https://lobby.example.com \
+  -e VITE_LOBBY_SERVICE_URL=https://lobby.example.com \
+  -v fish-data:/data \
+  fish-lobby
 ```
 
-## 3. 启动（调试模式先跑通）
+含义：
+- `-p 127.0.0.1:5157:5157` — 只暴露给本机（外层 Caddy 再反代）
+- `ALLOWED_ORIGINS` — 允许调用大厅 API 的 Web 来源，**必填**
+- `VITE_LOBBY_SERVICE_URL` — Web 端要连的大厅地址，**会写进镜像构建期**（见第 4 步）
+- `-v fish-data:/data` — 房间列表持久化到命名卷，重启/升级不丢
+
+查状态：
 
 ```bash
-ALLOWED_ORIGINS=https://lobby.example.com \
-  node scripts/start.mjs
+docker ps
+docker logs -f fish-lobby
 ```
 
-看到 `[start] listening on http://0.0.0.0:5157` 就是 OK。**Ctrl+C 退出。**
+看到 `[start] listening on http://0.0.0.0:5157` 就是 OK。
 
-> `ALLOWED_ORIGINS` **必填**——是允许调用大厅 API 的 Web 来源（多个用逗号分隔）。
+## 4. 一个容易踩的坑：Web 端 URL 是**构建期**写进 bundle 的
 
-## 4. 套 HTTPS（Caddy 自动签证书）
+`VITE_LOBBY_SERVICE_URL` 不会在容器启动时生效——它会在前端 build 时被 Vite
+打包进静态文件。所以**改 URL 必须重新 `docker build`**：
+
+```bash
+docker build -t fish-lobby . --build-arg VITE_LOBBY_SERVICE_URL=https://lobby.example.com
+```
+
+> 在 `Dockerfile` 里把 `VITE_LOBBY_SERVICE_URL` 写成 `ARG` 即可让 `docker build
+> --build-arg` 覆盖；当前默认直接读 `apps/web/.env.production`。
+> 你想用 build-arg 模式，告诉我，我把 Dockerfile 改一版。
+
+## 5. 套 HTTPS（Caddy 自动签证书）
 
 ```bash
 sudo apt install -y caddy
@@ -51,88 +78,59 @@ EOF
 sudo systemctl reload caddy
 ```
 
-Caddy 会自动申请并续期 Let's Encrypt 证书。访问 `https://lobby.example.com` 看到 Web 页面就是通了。
+Caddy 会自动申请并续期 Let's Encrypt 证书。访问 `https://lobby.example.com`
+看到 Web 页面就是通了。
 
-## 5. 配置 Web 端连大厅（生产 URL）
-
-**这一步很容易漏。** Web 端在**构建期**就把大厅地址写进 bundle。
-
-在 `apps/web/.env.production` 写：
-
-```dotenv
-VITE_LOBBY_SERVICE_URL=https://lobby.example.com
-```
-
-然后**重新构建并重启**：
-
-```bash
-pnpm build:web
-```
-
-> 这里只需要 `build:web`（只构建 Web 端），不要跑 `pnpm build`（会试图构建所有 Room 应用，部署机器上没那个必要）。
-
-## 6. 配成 systemd 守护进程
-
-```bash
-sudo tee /etc/systemd/system/lobby.service > /dev/null <<'EOF'
-[Unit]
-Description=Fish Game Lobby
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/home/<你的用户>/fish-game
-Environment=ALLOWED_ORIGINS=https://lobby.example.com
-Environment=PORT=5157
-Environment=LOBBY_STORAGE_FILE=/var/lib/fish-game/lobby.json
-ExecStart=/usr/bin/node scripts/start.mjs
-Restart=on-failure
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo mkdir -p /var/lib/fish-game
-sudo chown www-data:www-data /var/lib/fish-game
-sudo systemctl daemon-reload
-sudo systemctl enable --now lobby
-sudo systemctl status lobby
-```
-
-`active (running)` 就是 OK。房间列表会持久化到 `/var/lib/fish-game/lobby.json`。
-
-## 7. 升级
+## 6. 升级
 
 ```bash
 cd fish-game
 git pull
-pnpm install --frozen-lockfile
-pnpm build:web
-sudo systemctl restart lobby
+docker build -t fish-lobby .
+docker rm -f fish-lobby
+docker run -d --name fish-lobby --restart unless-stopped \
+  -p 127.0.0.1:5157:5157 \
+  -e ALLOWED_ORIGINS=https://lobby.example.com \
+  -v fish-data:/data \
+  fish-lobby
+```
+
+> 命名卷 `fish-data` 不会被 `docker rm` 删除，房间列表保留。
+
+## 7. 备份与恢复
+
+```bash
+# 备份
+docker run --rm -v fish-data:/data -v $(pwd):/backup \
+  alpine tar czf /backup/lobby-backup.tgz /data
+
+# 恢复
+docker run --rm -v fish-data:/data -v $(pwd):/backup \
+  alpine tar xzf /backup/lobby-backup.tgz -C /
 ```
 
 ## 常用命令
 
 | 操作 | 命令 |
 | --- | --- |
-| 看实时日志 | `sudo journalctl -u lobby -f` |
-| 重启 | `sudo systemctl restart lobby` |
-| 停 | `sudo systemctl stop lobby` |
-| 备份房间数据 | 拷贝 `LOBBY_STORAGE_FILE` 指向的文件 |
-| 健康检查 | `curl http://127.0.0.1:5158/v1/health`（localhost 限定） |
+| 看实时日志 | `docker logs -f fish-lobby` |
+| 重启容器 | `docker restart fish-lobby` |
+| 停 | `docker stop fish-lobby` |
+| 删容器（保留数据卷） | `docker rm -f fish-lobby` |
+| 进 shell 排查 | `docker exec -it fish-lobby sh` |
+| 健康检查 | `curl http://127.0.0.1:5157/v1/health` |
 
 ## 端口
 
-- **5157** — 对外（Web + `/v1/*`），Caddy 反代到这个端口
-- **5158** — 大厅 mock 内部端口，**不要**对外暴露，不要改防火墙
+- **5157** — 对外（Web + `/v1/*`），Caddy 反代到 `127.0.0.1:5157`
+- **5158** — 大厅 mock 内部端口，**只在容器内**，不要 expose
 
 ## 遇到问题
 
 | 现象 | 排查 |
 | --- | --- |
-| 浏览器调不到 `/v1/*` | 99% 是 `ALLOWED_ORIGINS` 没设对，看 `[start] CORS allow:` 那行 |
-| 改了 `VITE_LOBBY_SERVICE_URL` 不生效 | 必须**重新 `pnpm build:web`** |
-| `pnpm build:web` 报 `EACCES .../apps/web/config.local.json` | 这个文件不应在 server 端，删掉 |
-| 房间列表重启没了 | 看 `lobby.service` 里 `LOBBY_STORAGE_FILE` 路径 + 目录 `chown` 给了 `www-data` |
+| 浏览器调不到 `/v1/*` | 99% 是 `ALLOWED_ORIGINS` 没设对，看 `docker logs` 里 `[start] CORS allow:` |
+| 改了 `VITE_LOBBY_SERVICE_URL` 不生效 | 必须**重新 `docker build`**，镜像里的 bundle 是构建时定的 |
+| 容器起不来：`Cannot find module 'tsx'` | 镜像构建阶段没拷贝 `node_modules`，看 `Dockerfile` 的 `COPY --from=builder` |
+| 房间列表重启没了 | 检查 `-v fish-data:/data` 是否挂上（`docker inspect fish-lobby` 看 `Mounts`） |
+| 镜像特别大 | 当前 `node_modules` 全拷，~700MB。要瘦身可以告诉我换成 production 模式 + 全转 .js |
