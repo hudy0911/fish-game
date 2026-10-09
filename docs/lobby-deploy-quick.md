@@ -69,6 +69,8 @@ VITE_LOBBY_SERVICE_URL=https://lobby.example.com
 pnpm build:web
 ```
 
+> 这里只需要 `build:web`（只构建 Web 端），不要跑 `pnpm build`（会试图构建所有 Room 应用，部署机器上没那个必要）。
+
 ## 6. 配成 systemd 守护进程
 
 ```bash
